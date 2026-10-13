@@ -15,7 +15,10 @@ if not SECRET_KEY:
         keyfile.write_text(get_random_secret_key())
         keyfile.chmod(0o600)
     SECRET_KEY = keyfile.read_text()
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
+APP_HOST = 'rockyworldwide.vercel.app'
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',') if host.strip()]
+if APP_HOST not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(APP_HOST)
 INSTALLED_APPS = ['django.contrib.auth','django.contrib.contenttypes','django.contrib.sessions','django.contrib.messages','django.contrib.staticfiles','operations']
 MIDDLEWARE = ['django.middleware.security.SecurityMiddleware','whitenoise.middleware.WhiteNoiseMiddleware','django.contrib.sessions.middleware.SessionMiddleware','django.middleware.common.CommonMiddleware','django.middleware.csrf.CsrfViewMiddleware','django.contrib.auth.middleware.AuthenticationMiddleware','operations.middleware.ActiveSessionMiddleware','django.contrib.messages.middleware.MessageMiddleware','django.middleware.clickjacking.XFrameOptionsMiddleware']
 ROOT_URLCONF = 'rocky.urls'
@@ -60,7 +63,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGGING = {'version':1,'disable_existing_loggers':False,'filters':{'redact':{'()':'operations.logging.RedactResetLinks'}},'handlers':{'safe_console':{'class':'logging.StreamHandler','filters':['redact']}},'loggers':{'django.request':{'handlers':['safe_console'],'level':'WARNING','propagate':False},'django.server':{'handlers':['safe_console'],'level':'INFO','propagate':False}}}
 DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
-CSRF_TRUSTED_ORIGINS = [x for x in os.environ.get('CSRF_TRUSTED_ORIGINS','').split(',') if x]
+CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.environ.get('CSRF_TRUSTED_ORIGINS','').split(',') if x.strip()]
+if 'https://'+APP_HOST not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append('https://'+APP_HOST)
 SECURE_REFERRER_POLICY = 'same-origin'
 
 # Trust only the platform-assigned host for this deployment, not all vercel.app domains.

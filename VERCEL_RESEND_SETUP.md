@@ -14,8 +14,8 @@ The app has a native Django Vercel configuration and a Resend HTTPS mail backend
 | `DJANGO_SECRET_KEY` | Strong generated secret; keep stable across redeployments |
 | `DATABASE_URL` | Hosted PostgreSQL URL, including credentials, entered securely |
 | `DB_SSLMODE` | `verify-full` with the database provider’s trust configuration |
-| `ALLOWED_HOSTS` | `dispatch.rockylimos.com` |
-| `CSRF_TRUSTED_ORIGINS` | `https://dispatch.rockylimos.com` |
+| `ALLOWED_HOSTS` | `rockyworldwide.vercel.app` |
+| `CSRF_TRUSTED_ORIGINS` | `https://rockyworldwide.vercel.app` |
 | `EMAIL_PROVIDER` | `resend` |
 | `RESEND_API_KEY` | Resend sending key, entered securely |
 | `DEFAULT_FROM_EMAIL` | Approved sender under a Resend-verified domain |
@@ -23,14 +23,16 @@ The app has a native Django Vercel configuration and a Resend HTTPS mail backend
 Vercel’s platform-assigned `VERCEL_URL` is additionally allowed for that specific deployment. No wildcard trust of other tenants' vercel.app hosts is used. SMTP settings are unnecessary when `EMAIL_PROVIDER=resend`.
 
 6. **Migrations and existing accounts:** from a trusted local/CI administration environment, inject the production key and a direct database URL securely, then run `python manage.py migrate --noinput`. Alternatively, restore a private backup into a **new empty database first**, validate it, then apply migrations. The current five accounts exist only in this cloud workspace’s database; Vercel does not automatically copy them. Do not expose an HTTP migration/restore endpoint or run migrations on every serverless invocation. After migration, bootstrap an authorized manager with the interactive `bootstrap_accounts` command if using a fresh database; invite the others through management. To retain the configured initial accounts and history, transfer the private backup through a trusted provider-supported restoration procedure.
-7. Deploy. Native Vercel Django detection reads `manage.py`/the WSGI settings and collects static assets. It does not run `scripts/dev.sh`. Add `dispatch.rockylimos.com` under Project → Settings → Domains and publish the DNS records Vercel provides. Then update exact host/origin variables and redeploy if necessary.
+7. Deploy. Native Vercel Django detection reads `manage.py`/the WSGI settings and collects static assets. It does not run `scripts/dev.sh`. Use the project’s `rockyworldwide.vercel.app` production alias. This Vercel-owned address does not require rockylimos.com DNS changes. Ensure this hostname is assigned to the intended Vercel project under its domain settings. Then update exact host/origin variables and redeploy if necessary.
 8. Verify login, first-password change, dispatcher/management access, shift actions, database persistence after redeployment, and Resend invitation/reset acceptance and **actual recipient mailbox delivery**. Resend API acceptance alone does not establish inbox delivery; inspect delivery/bounce events. The app returns neutral forgot-password responses and preserves failure notices for administration.
 9. Enable hosted database backups, retention and recovery drills with the database provider. The cloud machine’s daily backup container does not run on Vercel. Arrange an independent scheduled backup job/provider service and encrypted off-host storage as required.
 
 ## Current limits
 
-The chosen app hostname is `dispatch.rockylimos.com`. The hosted PostgreSQL connection and Resend key/verified sender have not been supplied. No Vercel deployment, production migration, real email send or recipient delivery has been verified. The D01–D60 workbook and exact original logo asset remain separate pending inputs.
+The chosen app hostname is `rockyworldwide.vercel.app`. The hosted PostgreSQL connection and Resend key/verified sender have not been supplied. No Vercel deployment, production migration, real email send or recipient delivery has been verified. The D01–D60 workbook and exact original logo asset remain separate pending inputs.
 
 ## Implementation evidence
 
 Vercel native Django framework support was checked against the official `vercel/vercel` source (`packages/frameworks/src/frameworks.ts` and `packages/python/src/index.ts`). Direct documentation access was blocked by this cloud network, so live platform setup must still be checked in your Vercel project. Resend mail uses its HTTPS `POST https://api.resend.com/emails` endpoint with bearer authentication, a verified sender, and acceptance-ID validation; failures do not log message bodies, reset tokens or API keys.
+
+The application explicitly trusts `rockyworldwide.vercel.app` and its HTTPS origin, even if older host environment values are still present. Other configured hosts are preserved; unrelated Vercel tenant hostnames are not trusted.

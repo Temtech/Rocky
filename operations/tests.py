@@ -2,7 +2,7 @@ import uuid, json, tempfile, csv, re
 from datetime import datetime, timedelta, timezone as dtz
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
-from django.test import TestCase,TransactionTestCase,Client,override_settings
+from django.test import TestCase,TransactionTestCase,SimpleTestCase,Client,override_settings
 from django.db import transaction, IntegrityError, DatabaseError, close_old_connections, connections
 from django.core import mail
 from django.contrib.auth.tokens import default_token_generator
@@ -267,3 +267,14 @@ class ResendBackendTests(TestCase):
             with self.assertRaises(RuntimeError) as caught:send_mail('Subject','Body','a@example.test',['b@example.test'])
             self.assertNotIn('Sensitive token',str(caught.exception))
             self.assertEqual(send_mail('Subject','Body','a@example.test',['b@example.test'],fail_silently=True),0)
+
+class VercelDomainTests(SimpleTestCase):
+    def test_production_alias_is_accepted(self):
+        from django.conf import settings
+        self.assertIn('rockyworldwide.vercel.app',settings.ALLOWED_HOSTS)
+        self.assertIn('https://rockyworldwide.vercel.app',settings.CSRF_TRUSTED_ORIGINS)
+        response=self.client.get('/login/',HTTP_HOST='rockyworldwide.vercel.app',HTTP_X_FORWARDED_PROTO='https')
+        self.assertEqual(response.status_code,200)
+    def test_unrelated_host_is_rejected(self):
+        response=self.client.get('/login/',HTTP_HOST='untrusted-other-tenant.vercel.app',HTTP_X_FORWARDED_PROTO='https')
+        self.assertEqual(response.status_code,400)
