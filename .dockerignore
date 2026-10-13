@@ -1,0 +1,9 @@
+.git
+.env
+.venv
+.local
+__pycache__
+*.pyc
+staticfiles
+test-results
+private-backups

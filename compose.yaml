@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rocky
+      POSTGRES_USER: rocky
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a unique database password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U rocky -d rocky]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEBUG: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+    expose: ["8000"]
+    command: [sh, -c, "python manage.py collectstatic --noinput && exec gunicorn rocky.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 30 --access-logfile /dev/null"]
+  backups:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGDATABASE: rocky
+      PGUSER: rocky
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set a unique database password}
+      BACKUP_INTERVAL_SECONDS: 86400
+    entrypoint: [bash, /usr/local/bin/rocky-backup]
+    volumes:
+      - ./scripts/production_backup.sh:/usr/local/bin/rocky-backup:ro
+      - ./private-backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set the application's real domain}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [app]
+volumes:
+  pgdata:
+  caddydata:
+  caddyconfig:

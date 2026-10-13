@@ -1,0 +1,35 @@
+{% extends 'base.html' %}{% load ops %}{% block content %}<div class="page-head"><div><p class="eyebrow">SHIFT CLOSEOUT / {{ shift.id|short_id }}</p><h1>Daily summary</h1><p class="muted">Generated from source records. Add only brief additional comments.</p></div></div><div class="notice">This is the current live report preview. Submitting creates a permanent snapshot; later submissions create separate revisions.</div><section class="card"><div class="card-head"><h2>Email-ready report</h2><button class="button secondary" type="button" data-copy="summary-text">Copy report</button></div><div class="card-body"><textarea readonly class="copy-text" id="summary-text">ROCKY’S · DAILY SHIFT SUMMARY
+Employee: {{ shift.employee }}
+Shift: {{ shift.id }}
+Shift date: {{ shift.shift_date }}
+Start: {{ shift.start|date:'M j, Y · g:i A T' }}
+End: {{ shift.end|date:'M j, Y · g:i A T'|default:'Not ended' }}
+Elapsed hours: {{ snapshot.attendance.elapsed_hours|default_if_none:'Incomplete' }}
+Completed break hours: {{ snapshot.attendance.break_hours }}
+Net hours (not paid hours): {{ snapshot.attendance.net_hours|default_if_none:'Incomplete' }}
+
+UNRESOLVED EXCEPTIONS & FOLLOW-UPS
+{% for i in snapshot.unresolved_exceptions %}{{ i.id }} · {{ i.description }}
+Owner: {{ i.owner }} · Due: {{ i.deadline }}
+Next action: {{ i.next_action }} · {{ i.status }}{% if i.management_attention %} · MANAGEMENT ATTENTION{% endif %}
+{% empty %}None.
+{% endfor %}
+HANDOFF ITEMS
+{% for i in snapshot.handoff_items %}{{ i.description }} · {{ i.owner }} · {{ i.deadline }}
+Next: {{ i.next_action }}
+{% empty %}None.
+{% endfor %}
+VERIFICATION ACTIVITY
+{% for v in snapshot.verification %}{{ v.subject }} · {{ v.research_status }} · {{ v.outcome }}
+{% empty %}None.
+{% endfor %}
+OUTREACH
+Researched prospects: {{ snapshot.researched_prospects }}
+Confirmed email sends: {{ snapshot.emails_sent }}
+Unique contacts reached: {{ snapshot.unique_contacts_reached }}
+{% for p in snapshot.responses_requiring_follow_up %}Follow-up: {{ p.company }} · {{ p.follow_up }}
+{% endfor %}
+APPLICABLE DUTIES
+{% for d in snapshot.duties %}{{ d.code }} · {{ d.description }} · {{ d.status }}
+{% empty %}No applicable duties.
+{% endfor %}</textarea></div></section><section class="card form-card"><form method="post" data-processing>{% csrf_token %}<input type="hidden" name="request_id" value="{{ request_id }}">{{ form.as_p }}<button type="submit">Submit Daily Summary</button></form></section>{% endblock %}
