@@ -1,0 +1,11 @@
+.git/
+.local/
+.venv/
+.env
+.env.*
+private-backups/
+test-results/
+__pycache__/
+*.pyc
+scripts/browser_test.py
+scripts/browser_security_test.py

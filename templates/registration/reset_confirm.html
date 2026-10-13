@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<section class="auth-card"><h1>Choose a new password</h1><form method="post">{% csrf_token %}<input type="hidden" name="request_id" value="{{ request_id }}">{{ form.as_p }}<button type="submit">Save new password</button></form></section>{% endblock %}

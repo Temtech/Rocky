@@ -1,0 +1,6 @@
+{$APP_DOMAIN} {
+    reverse_proxy app:8000
+    header Referrer-Policy same-origin
+    header X-Content-Type-Options nosniff
+    # Access logging deliberately disabled: reset links contain single-use secrets.
+}
