@@ -1,5 +1,7 @@
 # Rocky’s Operations Workspace
 
+This dispatcher-tracker project is maintained on [`dispatch-tracker`](https://github.com/Temtech/Rocky/tree/dispatch-tracker) in `Temtech/Rocky`. Make project changes and deployments from that branch. Leave `main` unchanged. Configure the Vercel project’s Production Branch / Branch Tracking as `dispatch-tracker`; changing the Git working branch alone does not change Vercel’s deployment settings. The application address is `rockyworldwide.vercel.app`.
+
 A runnable Django 5.2 / PostgreSQL 16 application for Rocky’s Worldwide Chauffeured Transportation. Ground Alliance remains the system for reservations, chauffeurs, trips and flights. This application records attendance, operational exceptions, downtime research/outreach, summaries and handoffs.
 
 ## Run locally

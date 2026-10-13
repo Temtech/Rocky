@@ -47,3 +47,7 @@ Date: 2026-10-13. Executed in the cloud machine with Python 3.12, Django 5.2.18,
 ## Vercel / Resend preparation follow-up
 
 The selected production hostname is `rockyworldwide.vercel.app`. Native `vercel.json` configuration and a Resend HTTPS mail backend have been added. The full integration suite now passes **43 tests**, including four mail-backend tests for request construction/acceptance IDs, missing keys, unconfirmed responses and sanitized provider errors. Those mail tests use a mocked HTTP transport; they do not establish real Resend acceptance or mailbox delivery. Vercel framework detection was checked in its official source repository, but no live Vercel build or deployment has been executed. A hosted PostgreSQL connection, production project access, DNS configuration, Resend key and verified sender are still required. Setup instructions and a non-secret Vercel variable template are included.
+
+## Branch transition
+
+The active project/deployment source is now `dispatch-tracker` in `Temtech/Rocky`. Documentation and repository agent instructions were updated to reflect that branch. This transition changes no application logic. Remote branch refs are checked after publication to verify `main` remains at its prior commit. Vercel production branch tracking must still be selected in the external project settings; it has not been modified through this workspace.
