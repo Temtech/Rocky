@@ -40,3 +40,15 @@ The application explicitly trusts `rockyworldwide.vercel.app` and its HTTPS orig
 ## Active branch and deployment source
 
 The project has returned to `main`. The complete application is on that branch, while `dispatch-tracker` is intentionally empty. Set Vercel Production Branch / Branch Tracking to `main` and create a deployment from its latest commit. Keep the project root at the repository root containing `manage.py` and `vercel.json`. Domain settings remain `rockyworldwide.vercel.app`; Resend and database variables remain server-side. This restores the frontend templates and backend together. Changing branches does not transfer production database records or resolve missing migrations/connection errors.
+
+## Login unavailable / earlier HTTP 500
+
+The login page can render without a database query, but submitting it requires the persistent login-rate-limit table, employee accounts, sessions and audit tables. A successful build does not create those tables or copy local employee records. Database failures now return a clear HTTP 503 sign-in-unavailable page and emit only a safe diagnostic category in Vercel Runtime Logs:
+
+- `database_connection`: configure/recheck hosted PostgreSQL `DATABASE_URL`, hostname and network access. Do not use loopback addresses on Vercel.
+- `missing_schema_run_migrations`: apply the committed Django migrations to the production database from a trusted administrator environment.
+- `database_tls_configuration`: configure the database provider's trusted CA/root-certificate settings while retaining certificate verification.
+- `database_authentication`: correct the production database credentials securely.
+- `database_configuration`: inspect the private provider/runtime configuration; raw connection strings are intentionally excluded from app diagnostics.
+
+After the database connection and migrations are verified, transfer the existing private account database or bootstrap/invite approved employees. Changing branches, Resend keys or login passwords does not repair a missing production database. No live production database repair has been performed without its connection/admin access.

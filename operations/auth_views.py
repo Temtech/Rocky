@@ -1,11 +1,13 @@
 import hashlib
+import logging
 from datetime import timedelta
 from django.contrib.auth import views as auth, login
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.forms import SetPasswordForm,AuthenticationForm
 from django.core.mail import send_mail
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -32,13 +34,39 @@ class LoginView(auth.LoginView):
     authentication_form=EmailAuthenticationForm
     template_name='registration/login.html'
     def post(self,request,*args,**kwargs):
-        if limited(request,'login'): return HttpResponse('Too many attempts. Try again in 15 minutes.',status=429)
-        return super().post(request,*args,**kwargs)
+        try:
+            if limited(request,'login'): return HttpResponse('Too many attempts. Try again in 15 minutes.',status=429)
+            return super().post(request,*args,**kwargs)
+        except DatabaseError as exc:
+            request.session.clear()
+            request.user=AnonymousUser()
+            cause=exc.__cause__
+            text=str(exc).lower()
+            if getattr(cause,'sqlstate',None)=='42P01' or ('relation' in text and 'does not exist' in text):
+                category='missing_schema_run_migrations'
+            elif 'certificate' in text:
+                category='database_tls_configuration'
+            elif 'password authentication failed' in text:
+                category='database_authentication'
+            elif 'connection refused' in text or 'could not translate host' in text or 'name or service not known' in text:
+                category='database_connection'
+            else:
+                category='database_configuration'
+            # Never log the raw exception, SQL parameters, connection URL or posted credentials.
+            logging.getLogger('django.request').error('Login database unavailable: category=%s exception=%s',category,type(exc).__name__)
+            form=self.get_form_class()(request=request,initial={'username':request.POST.get('username','')})
+            context=self.get_context_data(form=form)
+            context['storage_error']='Sign-in is temporarily unavailable. Your login has not been completed. Please contact management.'
+            response=self.render_to_response(context)
+            response.status_code=503
+            response['Retry-After']='60'
+            return response
     def form_valid(self,form):
-        result=super().form_valid(form)
-        self.request.session['version']=self.request.user.session_version
-        Audit.objects.create(actor=self.request.user,action='account.login',target=str(self.request.user.pk))
-        return result
+        with transaction.atomic():
+            result=super().form_valid(form)
+            self.request.session['version']=self.request.user.session_version
+            Audit.objects.create(actor=self.request.user,action='account.login',target=str(self.request.user.pk))
+            return result
 
 def email_configured():
     return bool(settings.RESEND_API_KEY) if settings.EMAIL_BACKEND=='operations.resend_backend.EmailBackend' else bool(settings.EMAIL_HOST)

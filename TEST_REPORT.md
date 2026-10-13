@@ -6,7 +6,7 @@ Date: 2026-10-13. Executed in the cloud machine with Python 3.12, Django 5.2.18,
 
 | Check | Result | Evidence and limits |
 |---|---|---|
-| Django/PostgreSQL integration suite | **43 passed**, 0 failed, 0 skipped | `DEBUG=1 /workspace/rocky-venv/bin/python manage.py test operations --noinput`; current run executed all tests, returned exit 0 and destroyed its temporary database. |
+| Django/PostgreSQL integration suite | **49 passed**, 0 failed, 0 skipped | `DEBUG=1 /workspace/rocky-venv/bin/python manage.py test operations --noinput`; current run executed all tests, returned exit 0 and destroyed its temporary database. |
 | Dispatcher/management login and permissions | Passed | Role redirects; private attendance API and productivity scoping; management-only approvals/settings; CSRF enforcement; mandatory first-password change. Case-insensitive email login and database email uniqueness tested. |
 | Attendance and breaks | Passed | All actions, two breaks, invalid transitions, immutable originals, incomplete final values, server-time authority, foreign-employee break rejection, duplicate-active-shift constraints. |
 | Concurrent/idempotent writes | Passed | Three simultaneous start requests created one shift/event; same-key replay; conflicting reuse rejected; duplicate business forms, outreach sends and summary submissions saved once. Threaded test connections are explicitly closed, including teardown. |
@@ -51,3 +51,9 @@ The selected production hostname is `rockyworldwide.vercel.app`. Native `vercel.
 ## Branch transition
 
 The user has returned this project to `main` and requested an empty `dispatch-tracker` branch. The full application tree from `dispatch-tracker` was restored to `main`; only repository/deployment documentation was updated for the new branch choice. Application logic is preserved. History is retained, and the branch file trees are checked after publication. Vercel production tracking must use `main`; external project settings are not modified by Git branch changes.
+
+## Production login failure diagnosis
+
+A live GET of `https://rockyworldwide.vercel.app/login/` returned the login form (HTTP 200), while one CSRF-valid empty-credential POST returned HTTP 500. No real account credentials were submitted. The empty form should fail validation without attempting password authentication; the login rate limiter first requires the database. The exact production database error remains unknown without runtime logs or deployment administration access.
+
+The login view now handles database failures with a clear HTTP 503 sign-in-unavailable page and safe log categories, preserves the entered email only, keeps authentication/rate-limit protection intact, and makes successful login/audit updates transactional. The full suite now executes and passes 49 tests, including connection/schema/TLS diagnostics and rollback of authentication when its audit save fails. No production database repair, account transfer or successful live login is claimed. Redeploy the updated main commit and use the runtime diagnostic category to identify the remaining production prerequisite.

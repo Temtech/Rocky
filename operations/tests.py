@@ -278,3 +278,41 @@ class VercelDomainTests(SimpleTestCase):
     def test_unrelated_host_is_rejected(self):
         response=self.client.get('/login/',HTTP_HOST='untrusted-other-tenant.vercel.app',HTTP_X_FORWARDED_PROTO='https')
         self.assertEqual(response.status_code,400)
+
+class LoginDatabaseFailureTests(SimpleTestCase):
+    def test_unavailable_database_fails_closed_and_retains_only_email(self):
+        from django.db import OperationalError
+        with patch('operations.auth_views.limited',side_effect=OperationalError('connection refused, sensitive database details')),patch('operations.auth_views.auth.LoginView.post') as authenticate:
+            with self.assertLogs('django.request',level='ERROR') as captured:
+                response=self.client.post('/login/',{'username':'noah@example.test','password':'private-entered-password'})
+            self.assertEqual(response.status_code,503)
+            self.assertContains(response,'Sign-in is temporarily unavailable',status_code=503)
+            self.assertContains(response,'noah@example.test',status_code=503)
+            self.assertNotContains(response,'private-entered-password',status_code=503)
+            self.assertNotContains(response,'sensitive database details',status_code=503)
+            self.assertIn('database_connection',' '.join(captured.output))
+            self.assertNotIn('sensitive database details',' '.join(captured.output))
+            authenticate.assert_not_called()
+    def test_missing_tables_get_safe_migration_diagnostic(self):
+        from django.db import ProgrammingError
+        with patch('operations.auth_views.limited',side_effect=ProgrammingError('relation does not exist')):
+            with self.assertLogs('django.request',level='ERROR') as captured:
+                self.assertEqual(self.client.post('/login/',{}).status_code,503)
+            self.assertIn('missing_schema_run_migrations',' '.join(captured.output))
+    def test_certificate_failure_preserves_verification(self):
+        from django.db import OperationalError
+        with patch('operations.auth_views.limited',side_effect=OperationalError('root certificate file does not exist')):
+            with self.assertLogs('django.request',level='ERROR') as captured:
+                self.assertEqual(self.client.post('/login/',{}).status_code,503)
+            self.assertIn('database_tls_configuration',' '.join(captured.output))
+
+class LoginAuditFailureTests(TestCase):
+    def test_failed_login_audit_does_not_establish_a_new_session(self):
+        from django.db import OperationalError
+        user=User.objects.create_user(username='audit@example.test',email='audit@example.test',password=PASSWORD)
+        with patch('operations.auth_views.Audit.objects.create',side_effect=OperationalError('database temporarily unavailable')):
+            with self.assertLogs('django.request',level='ERROR'):
+                response=self.client.post('/login/',{'username':user.email,'password':PASSWORD})
+        self.assertEqual(response.status_code,503)
+        self.assertNotIn('_auth_user_id',self.client.session)
+        user.refresh_from_db();self.assertIsNone(user.last_login)
